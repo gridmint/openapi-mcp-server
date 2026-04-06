@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Universal OpenAPI/Swagger MCP server — 3 meta-tools instead of 300+. Supports Swagger 2.0 & OpenAPI 3.x, recursive $ref resolution, real API calls.",
   "type": "module",
-  "main": "src/index.ts",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node",

@@ -34,8 +34,12 @@ Download from [Releases](https://github.com/gridmint/openapi-mcp-server/releases
 | Windows x64 | `openapi-mcp-windows-x64.exe` |
 
 ```bash
-# Linux/macOS
+# Download the binary for your platform (replace the filename as needed)
+# Linux x64:
 curl -L -o openapi-mcp https://github.com/gridmint/openapi-mcp-server/releases/latest/download/openapi-mcp-linux-x64
+# macOS Apple Silicon:
+# curl -L -o openapi-mcp https://github.com/gridmint/openapi-mcp-server/releases/latest/download/openapi-mcp-darwin-arm64
+
 chmod +x openapi-mcp
 ./openapi-mcp --spec https://petstore3.swagger.io/api/v3/openapi.json
 ```
