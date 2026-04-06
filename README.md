@@ -21,20 +21,32 @@ This server gives you **3 tools** that let the LLM explore and call any API:
 
 ## Quick Start
 
-### npx (zero install)
+### Download binary (zero deps, single file)
+
+Download from [Releases](https://github.com/gridmint/openapi-mcp-server/releases):
+
+| Platform | Binary |
+|----------|--------|
+| Linux x64 | `openapi-mcp-linux-x64` |
+| Linux ARM64 | `openapi-mcp-linux-arm64` |
+| macOS x64 | `openapi-mcp-darwin-x64` |
+| macOS ARM64 (Apple Silicon) | `openapi-mcp-darwin-arm64` |
+| Windows x64 | `openapi-mcp-windows-x64.exe` |
 
 ```bash
-npx @gridmint/openapi-mcp-server --spec https://petstore3.swagger.io/api/v3/openapi.json
+# Linux/macOS
+curl -L -o openapi-mcp https://github.com/gridmint/openapi-mcp-server/releases/latest/download/openapi-mcp-linux-x64
+chmod +x openapi-mcp
+./openapi-mcp --spec https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-### Compiled binary (zero deps)
+### Build from source
 
 ```bash
-# Build single-file binary
-bun build src/index.ts --compile --outfile openapi-mcp
-
-# Run
-./openapi-mcp --spec https://gitea.example.com/swagger.v1.json --auth bearer:YOUR_TOKEN
+git clone https://github.com/gridmint/openapi-mcp-server.git
+cd openapi-mcp-server
+bun install && bun run compile
+./openapi-mcp --spec https://gitea.example.com/swagger.v1.json --auth bearer:TOKEN
 ```
 
 ## Usage with Claude Desktop
@@ -43,9 +55,8 @@ bun build src/index.ts --compile --outfile openapi-mcp
 {
   "mcpServers": {
     "petstore": {
-      "command": "npx",
+      "command": "/path/to/openapi-mcp",
       "args": [
-        "-y", "@gridmint/openapi-mcp-server",
         "--spec", "https://petstore3.swagger.io/api/v3/openapi.json"
       ]
     }
@@ -59,9 +70,8 @@ bun build src/index.ts --compile --outfile openapi-mcp
 {
   "mcpServers": {
     "gitea": {
-      "command": "npx",
+      "command": "/path/to/openapi-mcp",
       "args": [
-        "-y", "@gridmint/openapi-mcp-server",
         "--spec", "https://gitea.example.com/swagger.v1.json",
         "--base-url", "https://gitea.example.com/api/v1",
         "--auth", "bearer:YOUR_TOKEN"
@@ -77,9 +87,8 @@ bun build src/index.ts --compile --outfile openapi-mcp
 {
   "mcpServers": {
     "gitea-repos": {
-      "command": "npx",
+      "command": "/path/to/openapi-mcp",
       "args": [
-        "-y", "@gridmint/openapi-mcp-server",
         "--spec", "https://gitea.example.com/swagger.v1.json",
         "--auth", "bearer:YOUR_TOKEN",
         "--include", "repos/*",
