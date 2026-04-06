@@ -1,5 +1,5 @@
 {
-  "name": "openapi-mcp-server",
+  "name": "@gridmint/openapi-mcp-server",
   "version": "0.1.0",
   "description": "Universal OpenAPI/Swagger MCP server — 3 meta-tools instead of 300+. Supports Swagger 2.0 & OpenAPI 3.x, recursive $ref resolution, real API calls.",
   "type": "module",
@@ -35,12 +35,12 @@
   "author": "overpod",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "zod": "^3.24.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.0",
+    "@biomejs/biome": "^2.4.10",
     "@types/bun": "latest",
-    "typescript": "^5.7.0"
+    "typescript": "^6.0.2"
   }
 }

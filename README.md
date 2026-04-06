@@ -24,7 +24,7 @@ This server gives you **3 tools** that let the LLM explore and call any API:
 ### npx (zero install)
 
 ```bash
-npx openapi-mcp-server --spec https://petstore3.swagger.io/api/v3/openapi.json
+npx @gridmint/openapi-mcp-server --spec https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
 ### Compiled binary (zero deps)
@@ -45,7 +45,7 @@ bun build src/index.ts --compile --outfile openapi-mcp
     "petstore": {
       "command": "npx",
       "args": [
-        "-y", "openapi-mcp-server",
+        "-y", "@gridmint/openapi-mcp-server",
         "--spec", "https://petstore3.swagger.io/api/v3/openapi.json"
       ]
     }
@@ -61,7 +61,7 @@ bun build src/index.ts --compile --outfile openapi-mcp
     "gitea": {
       "command": "npx",
       "args": [
-        "-y", "openapi-mcp-server",
+        "-y", "@gridmint/openapi-mcp-server",
         "--spec", "https://gitea.example.com/swagger.v1.json",
         "--base-url", "https://gitea.example.com/api/v1",
         "--auth", "bearer:YOUR_TOKEN"
@@ -79,7 +79,7 @@ bun build src/index.ts --compile --outfile openapi-mcp
     "gitea-repos": {
       "command": "npx",
       "args": [
-        "-y", "openapi-mcp-server",
+        "-y", "@gridmint/openapi-mcp-server",
         "--spec", "https://gitea.example.com/swagger.v1.json",
         "--auth", "bearer:YOUR_TOKEN",
         "--include", "repos/*",
