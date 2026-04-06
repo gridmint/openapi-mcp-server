@@ -1,0 +1,46 @@
+{
+  "name": "openapi-mcp-server",
+  "version": "0.1.0",
+  "description": "Universal OpenAPI/Swagger MCP server — 3 meta-tools instead of 300+. Supports Swagger 2.0 & OpenAPI 3.x, recursive $ref resolution, real API calls.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "openapi-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "compile": "bun build src/index.ts --compile --outfile openapi-mcp",
+    "typecheck": "bunx tsc --noEmit",
+    "lint": "bunx biome check src/",
+    "lint:fix": "bunx biome check --fix src/",
+    "format": "bunx biome format --write src/",
+    "test": "bun test"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "openapi",
+    "swagger",
+    "rest-api",
+    "claude",
+    "ai-tools"
+  ],
+  "author": "overpod",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}
