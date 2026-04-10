@@ -220,7 +220,7 @@ export async function invoke(
 
 // === Helpers ===
 
-function globToRegex(pattern: string): RegExp {
+export function globToRegex(pattern: string): RegExp {
 	const escaped = pattern
 		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
 		.replace(/\*/g, ".*")

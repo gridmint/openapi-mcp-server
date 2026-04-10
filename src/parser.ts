@@ -72,7 +72,7 @@ async function loadSpec(specUrl: string): Promise<Record<string, unknown>> {
 	return parseText(text);
 }
 
-function parseText(text: string): Record<string, unknown> {
+export function parseText(text: string): Record<string, unknown> {
 	const trimmed = text.trimStart();
 	// If it looks like JSON, try JSON first
 	if (trimmed.startsWith("{")) {

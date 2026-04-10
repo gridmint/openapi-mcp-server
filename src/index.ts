@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { parseAuthString } from "./http.js";
 import { parseSpec } from "./parser.js";
-import { getSchema, invoke, listEndpoints } from "./tools.js";
+import { getSchema, globToRegex, invoke, listEndpoints } from "./tools.js";
 import type { ServerConfig } from "./types.js";
 
 // === CLI argument parsing ===
@@ -264,14 +264,6 @@ async function main(): Promise<void> {
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
 	console.error("MCP server started on stdio");
-}
-
-function globToRegex(pattern: string): RegExp {
-	const escaped = pattern
-		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
-		.replace(/\*/g, ".*")
-		.replace(/\?/g, ".");
-	return new RegExp(escaped);
 }
 
 main().catch((err) => {

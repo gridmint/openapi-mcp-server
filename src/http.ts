@@ -27,16 +27,20 @@ export async function invokeEndpoint(opts: {
 	}
 
 	// Add query params
-	if (opts.queryParams && Object.keys(opts.queryParams).length > 0) {
-		const params = new URLSearchParams();
+	const params = new URLSearchParams();
+	if (opts.queryParams) {
 		for (const [key, value] of Object.entries(opts.queryParams)) {
 			if (value !== undefined && value !== null && value !== "") {
 				params.set(key, value);
 			}
 		}
-		const qs = params.toString();
-		if (qs) url += `?${qs}`;
 	}
+	// Apply apikey query auth
+	if (opts.auth?.type === "apikey" && opts.auth.in === "query" && opts.auth.queryName) {
+		params.set(opts.auth.queryName, opts.auth.value ?? "");
+	}
+	const qs = params.toString();
+	if (qs) url += `?${qs}`;
 
 	// Build headers
 	const headers: Record<string, string> = { ...opts.headers };
@@ -105,7 +109,6 @@ function applyAuth(headers: Record<string, string>, auth: AuthConfig): void {
 			if (auth.in === "header") {
 				headers[auth.headerName ?? "X-API-Key"] = auth.value ?? "";
 			}
-			// query params handled in URL building
 			break;
 	}
 }
