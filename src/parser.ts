@@ -122,9 +122,15 @@ function resolveRefs(node: unknown, root: Record<string, unknown>, visited: Set<
 	return result;
 }
 
+const warnedExternalRefs = new Set<string>();
+
 function followRef(ref: string, root: Record<string, unknown>): unknown {
 	if (!ref.startsWith("#/")) {
-		throw new Error(`External $ref not supported: ${ref}`);
+		if (!warnedExternalRefs.has(ref)) {
+			warnedExternalRefs.add(ref);
+			console.error(`Warning: external $ref not supported, skipping: ${ref}`);
+		}
+		return { type: "object", description: `[external ref: ${ref}]` };
 	}
 	const parts = ref.slice(2).split("/").map(decodeJsonPointer);
 	let current: unknown = root;
@@ -141,13 +147,21 @@ function decodeJsonPointer(s: string): string {
 	return s.replace(/~1/g, "/").replace(/~0/g, "~");
 }
 
+function tryParseUrl(specUrl: string): URL | undefined {
+	try {
+		return new URL(specUrl);
+	} catch {
+		return undefined;
+	}
+}
+
 function extractBaseUrl(
 	doc: Record<string, unknown>,
 	specUrl: string,
 	isSwagger2: boolean,
 ): string {
 	if (isSwagger2) {
-		const host = (doc.host as string) ?? new URL(specUrl).host;
+		const host = (doc.host as string) ?? tryParseUrl(specUrl)?.host ?? "localhost";
 		const basePath = (doc.basePath as string) ?? "/";
 		const schemes = (doc.schemes as string[]) ?? ["https"];
 		return `${schemes[0]}://${host}${basePath}`.replace(/\/$/, "");
@@ -157,12 +171,12 @@ function extractBaseUrl(
 	if (servers?.[0]?.url) {
 		const url = servers[0].url;
 		if (url.startsWith("/")) {
-			const origin = new URL(specUrl).origin;
+			const origin = tryParseUrl(specUrl)?.origin ?? "http://localhost";
 			return `${origin}${url}`.replace(/\/$/, "");
 		}
 		return url.replace(/\/$/, "");
 	}
-	return new URL(specUrl).origin;
+	return tryParseUrl(specUrl)?.origin ?? "http://localhost";
 }
 
 // === Swagger 2.0 normalization ===

@@ -1,5 +1,8 @@
 import type { AuthConfig } from "./types.js";
 
+const FETCH_TIMEOUT_MS = 30_000;
+const MAX_TEXT_RESPONSE_LENGTH = 50_000;
+
 /**
  * HTTP client for invoking API endpoints with auth support.
  */
@@ -36,8 +39,8 @@ export async function invokeEndpoint(opts: {
 		}
 	}
 	// Apply apikey query auth
-	if (opts.auth?.type === "apikey" && opts.auth.in === "query" && opts.auth.queryName) {
-		params.set(opts.auth.queryName, opts.auth.value ?? "");
+	if (opts.auth?.type === "apikey" && opts.auth.in === "query") {
+		params.set(opts.auth.queryName, opts.auth.value);
 	}
 	const qs = params.toString();
 	if (qs) url += `?${qs}`;
@@ -51,12 +54,14 @@ export async function invokeEndpoint(opts: {
 	}
 
 	// Build request
+	const method = opts.method.toUpperCase();
 	const fetchOpts: RequestInit = {
-		method: opts.method.toUpperCase(),
+		method,
 		headers,
+		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 	};
 
-	if (opts.body !== undefined && !["GET", "HEAD"].includes(opts.method.toUpperCase())) {
+	if (opts.body !== undefined && !["GET", "HEAD"].includes(method)) {
 		if (typeof opts.body === "string") {
 			fetchOpts.body = opts.body;
 		} else {
@@ -85,10 +90,9 @@ export async function invokeEndpoint(opts: {
 		}
 	} else {
 		const text = await resp.text();
-		// Truncate very large responses
 		body =
-			text.length > 50000
-				? `${text.slice(0, 50000)}\n\n... [truncated, ${text.length} chars total]`
+			text.length > MAX_TEXT_RESPONSE_LENGTH
+				? `${text.slice(0, MAX_TEXT_RESPONSE_LENGTH)}\n\n... [truncated, ${text.length} chars total]`
 				: text;
 	}
 
@@ -107,7 +111,7 @@ function applyAuth(headers: Record<string, string>, auth: AuthConfig): void {
 		}
 		case "apikey":
 			if (auth.in === "header") {
-				headers[auth.headerName ?? "X-API-Key"] = auth.value ?? "";
+				headers[auth.headerName] = auth.value;
 			}
 			break;
 	}
@@ -124,11 +128,19 @@ export function parseAuthString(authStr: string): AuthConfig {
 	}
 
 	if (parts[0] === "basic") {
+		if (!parts[1]) {
+			throw new Error("Basic auth requires username: basic:user:pass");
+		}
 		return { type: "basic", username: parts[1], password: parts.slice(2).join(":") };
 	}
 
 	if (parts[0] === "apikey") {
-		const location = parts[1] as "header" | "query";
+		const location = parts[1];
+		if (location !== "header" && location !== "query") {
+			throw new Error(
+				`Invalid apikey location: "${location}". Expected: apikey:header:Name:Value or apikey:query:name:value`,
+			);
+		}
 		const name = parts[2];
 		const value = parts.slice(3).join(":");
 		if (location === "header") {

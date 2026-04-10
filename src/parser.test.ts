@@ -182,6 +182,17 @@ describe("parseSpec — OpenAPI 3.x", () => {
 		const spec = await parseSpec(fixturePath, "https://custom.api.com/v2");
 		expect(spec.baseUrl).toBe("https://custom.api.com/v2");
 	});
+
+	test("falls back to localhost for local file without servers", async () => {
+		const noServers = {
+			openapi: "3.0.0",
+			info: { title: "Local", version: "1.0.0" },
+			paths: {},
+		};
+		await Bun.write(fixturePath, JSON.stringify(noServers));
+		const spec = await parseSpec(fixturePath);
+		expect(spec.baseUrl).toBe("http://localhost");
+	});
 });
 
 describe("parseSpec — Swagger 2.0", () => {
@@ -280,6 +291,34 @@ describe("parseSpec — $ref resolution", () => {
 
 		expect(responseSchema.type).toBe("object");
 		expect(responseSchema.properties).toBeDefined();
+	});
+
+	test("handles external $ref gracefully", async () => {
+		const spec = {
+			openapi: "3.0.0",
+			info: { title: "External", version: "1.0.0" },
+			paths: {
+				"/ext": {
+					get: {
+						responses: {
+							"200": {
+								description: "OK",
+								content: {
+									"application/json": {
+										schema: { $ref: "https://other.com/schemas/Thing.json" },
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		};
+		await Bun.write(fixturePath, JSON.stringify(spec));
+		const parsed = await parseSpec(fixturePath);
+		expect(parsed.endpoints).toHaveLength(1);
+		const schema = parsed.endpoints[0].responses["200"]?.schema as Record<string, unknown>;
+		expect(schema.description).toContain("[external ref:");
 	});
 
 	test("handles circular $ref", async () => {

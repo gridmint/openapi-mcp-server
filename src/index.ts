@@ -2,10 +2,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import pkg from "../package.json";
 import { parseAuthString } from "./http.js";
 import { parseSpec } from "./parser.js";
 import { getSchema, globToRegex, invoke, listEndpoints } from "./tools.js";
-import type { ServerConfig } from "./types.js";
+import type { ParsedSpec, ServerConfig } from "./types.js";
 
 // === CLI argument parsing ===
 function parseArgs(): ServerConfig {
@@ -127,13 +128,23 @@ async function main(): Promise<void> {
 
 	console.error(`Loaded ${spec.title} v${spec.version}: ${spec.endpoints.length} endpoints`);
 
-	// Create MCP server
+	// Start server with selected transport
+	if (config.transport === "http") {
+		await startHttpTransport(spec, config);
+	} else {
+		const mcpServer = createMcpServer(spec, config);
+		const transport = new StdioServerTransport();
+		await mcpServer.connect(transport);
+		console.error("MCP server started on stdio");
+	}
+}
+
+function createMcpServer(spec: ParsedSpec, config: ServerConfig): McpServer {
 	const mcpServer = new McpServer(
-		{ name: `openapi-mcp: ${spec.title}`, version: "0.3.0" },
+		{ name: `openapi-mcp: ${spec.title}`, version: pkg.version },
 		{ capabilities: { tools: {} } },
 	);
 
-	// Use low-level server for dynamic tool schemas (no Zod dependency)
 	mcpServer.server.setRequestHandler(ListToolsRequestSchema, async () => ({
 		tools: [
 			{
@@ -226,33 +237,42 @@ async function main(): Promise<void> {
 
 		try {
 			let result: string;
+			const a = (args ?? {}) as Record<string, unknown>;
 
 			switch (name) {
 				case "list_endpoints":
 					result = listEndpoints(
 						spec,
-						args as { filter?: string; method?: string; tag?: string; page?: number },
+						a as { filter?: string; method?: string; tag?: string; page?: number },
 						config.pageSize,
 					);
 					break;
 
 				case "get_schema":
-					result = getSchema(spec, args as { method: string; path: string });
+					if (typeof a.method !== "string" || typeof a.path !== "string") {
+						return {
+							content: [{ type: "text", text: "Error: method and path are required strings" }],
+							isError: true,
+						};
+					}
+					result = getSchema(spec, { method: a.method, path: a.path });
 					break;
 
 				case "invoke":
-					result = await invoke(
-						spec,
-						config,
-						args as {
-							method: string;
-							path: string;
-							path_params?: Record<string, string>;
-							query_params?: Record<string, string>;
-							headers?: Record<string, string>;
-							body?: unknown;
-						},
-					);
+					if (typeof a.method !== "string" || typeof a.path !== "string") {
+						return {
+							content: [{ type: "text", text: "Error: method and path are required strings" }],
+							isError: true,
+						};
+					}
+					result = await invoke(spec, config, {
+						method: a.method,
+						path: a.path,
+						path_params: a.path_params as Record<string, string> | undefined,
+						query_params: a.query_params as Record<string, string> | undefined,
+						headers: a.headers as Record<string, string> | undefined,
+						body: a.body,
+					});
 					break;
 
 				default:
@@ -270,39 +290,81 @@ async function main(): Promise<void> {
 		}
 	});
 
-	// Start server with selected transport
-	if (config.transport === "http") {
-		await startHttpTransport(mcpServer, config.port);
-	} else {
-		const transport = new StdioServerTransport();
-		await mcpServer.connect(transport);
-		console.error("MCP server started on stdio");
-	}
+	return mcpServer;
 }
 
-async function startHttpTransport(mcpServer: McpServer, port: number): Promise<void> {
+const MAX_SESSIONS = 100;
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+interface HttpSession {
+	transport: InstanceType<
+		typeof import("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js").WebStandardStreamableHTTPServerTransport
+	>;
+	timer: ReturnType<typeof setTimeout>;
+}
+
+async function startHttpTransport(spec: ParsedSpec, config: ServerConfig): Promise<void> {
 	const { WebStandardStreamableHTTPServerTransport } = await import(
 		"@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 	);
 
-	const transport = new WebStandardStreamableHTTPServerTransport({
-		sessionIdGenerator: () => crypto.randomUUID(),
-	});
+	const sessions = new Map<string, HttpSession>();
 
-	await mcpServer.connect(transport);
+	function removeSession(id: string): void {
+		const session = sessions.get(id);
+		if (session) {
+			clearTimeout(session.timer);
+			sessions.delete(id);
+		}
+	}
 
 	Bun.serve({
-		port,
+		port: config.port,
 		fetch: async (req) => {
 			const url = new URL(req.url);
-			if (url.pathname === "/mcp") {
-				return transport.handleRequest(req);
+			if (url.pathname !== "/mcp") {
+				return new Response("Not Found", { status: 404 });
 			}
-			return new Response("Not Found", { status: 404 });
+
+			// Existing session
+			const sessionId = req.headers.get("mcp-session-id");
+			const existing = sessionId ? sessions.get(sessionId) : undefined;
+			if (sessionId && existing) {
+				// Reset TTL on activity
+				clearTimeout(existing.timer);
+				existing.timer = setTimeout(() => removeSession(sessionId), SESSION_TTL_MS);
+				return existing.transport.handleRequest(req);
+			}
+
+			// New session — create transport + server
+			if (req.method === "POST" && !sessionId) {
+				// Evict oldest session if at limit
+				if (sessions.size >= MAX_SESSIONS) {
+					const oldestId = sessions.keys().next().value;
+					if (oldestId) removeSession(oldestId);
+				}
+
+				const transport = new WebStandardStreamableHTTPServerTransport({
+					sessionIdGenerator: () => crypto.randomUUID(),
+				});
+				const mcpServer = createMcpServer(spec, config);
+				await mcpServer.connect(transport);
+
+				const response = await transport.handleRequest(req);
+				const newId = response.headers.get("mcp-session-id");
+				if (newId) {
+					const timer = setTimeout(() => removeSession(newId), SESSION_TTL_MS);
+					sessions.set(newId, { transport, timer });
+					transport.onclose = () => removeSession(newId);
+				}
+				return response;
+			}
+
+			return new Response("Bad Request", { status: 400 });
 		},
 	});
 
-	console.error(`MCP server started on http://localhost:${port}/mcp`);
+	console.error(`MCP server started on http://localhost:${config.port}/mcp`);
 }
 
 main().catch((err) => {

@@ -43,15 +43,31 @@ export interface ParsedSpec {
 	tags: string[];
 }
 
-export interface AuthConfig {
-	type: "bearer" | "basic" | "apikey";
-	token?: string;
-	username?: string;
-	password?: string;
-	headerName?: string;
-	queryName?: string;
-	value?: string;
-	in?: "header" | "query";
+export type AuthConfig = BearerAuth | BasicAuth | ApikeyHeaderAuth | ApikeyQueryAuth;
+
+export interface BearerAuth {
+	type: "bearer";
+	token: string;
+}
+
+export interface BasicAuth {
+	type: "basic";
+	username: string;
+	password: string;
+}
+
+export interface ApikeyHeaderAuth {
+	type: "apikey";
+	in: "header";
+	headerName: string;
+	value: string;
+}
+
+export interface ApikeyQueryAuth {
+	type: "apikey";
+	in: "query";
+	queryName: string;
+	value: string;
 }
 
 export interface ServerConfig {

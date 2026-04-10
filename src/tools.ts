@@ -1,6 +1,8 @@
 import { invokeEndpoint } from "./http.js";
 import type { Endpoint, ParsedSpec, ServerConfig } from "./types.js";
 
+const MAX_JSON_RESPONSE_LENGTH = 30_000;
+
 /**
  * list_endpoints — browse available API endpoints with optional filtering.
  */
@@ -203,8 +205,10 @@ export async function invoke(
 		if (typeof result.body === "object" && result.body !== null) {
 			const json = JSON.stringify(result.body, null, 2);
 			// Truncate very large responses for LLM context
-			if (json.length > 30000) {
-				lines.push(`${json.slice(0, 30000)}\n\n... [truncated, ${json.length} chars total]`);
+			if (json.length > MAX_JSON_RESPONSE_LENGTH) {
+				lines.push(
+					`${json.slice(0, MAX_JSON_RESPONSE_LENGTH)}\n\n... [truncated, ${json.length} chars total]`,
+				);
 			} else {
 				lines.push(json);
 			}
@@ -241,8 +245,8 @@ function schemaToTypeString(schema: Record<string, unknown>): string {
 	}
 	const type = schema.type as string | undefined;
 	const format = schema.format as string | undefined;
-	if (format) return `${type ?? "any"}(${format})`;
-	return type ?? "any";
+	if (format) return `${type ?? "unknown"}(${format})`;
+	return type ?? "unknown";
 }
 
 function formatSchema(schema: Record<string, unknown>, indent: number, depth = 0): string {
