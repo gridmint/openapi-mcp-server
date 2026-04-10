@@ -12,7 +12,12 @@ export async function invokeEndpoint(opts: {
 	headers?: Record<string, string>;
 	body?: unknown;
 	auth?: AuthConfig;
-}): Promise<{ status: number; statusText: string; headers: Record<string, string>; body: unknown }> {
+}): Promise<{
+	status: number;
+	statusText: string;
+	headers: Record<string, string>;
+	body: unknown;
+}> {
 	// Build URL with path params
 	let url = `${opts.baseUrl}${opts.path}`;
 	if (opts.pathParams) {
@@ -77,7 +82,10 @@ export async function invokeEndpoint(opts: {
 	} else {
 		const text = await resp.text();
 		// Truncate very large responses
-		body = text.length > 50000 ? `${text.slice(0, 50000)}\n\n... [truncated, ${text.length} chars total]` : text;
+		body =
+			text.length > 50000
+				? `${text.slice(0, 50000)}\n\n... [truncated, ${text.length} chars total]`
+				: text;
 	}
 
 	return { status: resp.status, statusText: resp.statusText, headers: respHeaders, body };
@@ -86,11 +94,11 @@ export async function invokeEndpoint(opts: {
 function applyAuth(headers: Record<string, string>, auth: AuthConfig): void {
 	switch (auth.type) {
 		case "bearer":
-			headers["Authorization"] = `Bearer ${auth.token}`;
+			headers.Authorization = `Bearer ${auth.token}`;
 			break;
 		case "basic": {
 			const encoded = btoa(`${auth.username}:${auth.password}`);
-			headers["Authorization"] = `Basic ${encoded}`;
+			headers.Authorization = `Basic ${encoded}`;
 			break;
 		}
 		case "apikey":

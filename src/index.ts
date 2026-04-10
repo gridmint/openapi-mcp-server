@@ -2,9 +2,9 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { parseSpec } from "./parser.js";
 import { parseAuthString } from "./http.js";
-import { listEndpoints, getSchema, invoke } from "./tools.js";
+import { parseSpec } from "./parser.js";
+import { getSchema, invoke, listEndpoints } from "./tools.js";
 import type { ServerConfig } from "./types.js";
 
 // === CLI argument parsing ===
@@ -58,7 +58,8 @@ function parseArgs(): ServerConfig {
 	// Also check env vars
 	if (!config.specUrl) config.specUrl = process.env.OPENAPI_SPEC_URL;
 	if (!config.baseUrl) config.baseUrl = process.env.OPENAPI_BASE_URL;
-	if (!config.auth && process.env.OPENAPI_AUTH) config.auth = parseAuthString(process.env.OPENAPI_AUTH);
+	if (!config.auth && process.env.OPENAPI_AUTH)
+		config.auth = parseAuthString(process.env.OPENAPI_AUTH);
 
 	if (!config.specUrl) {
 		console.error("Error: --spec <url-or-path> is required\n");
@@ -107,15 +108,11 @@ async function main(): Promise<void> {
 	// Apply include/exclude filters
 	if (config.include?.length) {
 		const patterns = config.include.map((p) => globToRegex(p));
-		spec.endpoints = spec.endpoints.filter((ep) =>
-			patterns.some((re) => re.test(ep.path)),
-		);
+		spec.endpoints = spec.endpoints.filter((ep) => patterns.some((re) => re.test(ep.path)));
 	}
 	if (config.exclude?.length) {
 		const patterns = config.exclude.map((p) => globToRegex(p));
-		spec.endpoints = spec.endpoints.filter((ep) =>
-			!patterns.some((re) => re.test(ep.path)),
-		);
+		spec.endpoints = spec.endpoints.filter((ep) => !patterns.some((re) => re.test(ep.path)));
 	}
 
 	console.error(`Loaded ${spec.title} v${spec.version}: ${spec.endpoints.length} endpoints`);
@@ -137,7 +134,8 @@ async function main(): Promise<void> {
 					properties: {
 						filter: {
 							type: "string",
-							description: "Filter by path, summary, or operationId (glob pattern, e.g. 'repos/*', '*issue*')",
+							description:
+								"Filter by path, summary, or operationId (glob pattern, e.g. 'repos/*', '*issue*')",
 						},
 						method: {
 							type: "string",
@@ -156,7 +154,8 @@ async function main(): Promise<void> {
 			},
 			{
 				name: "get_schema",
-				description: "Get detailed schema for a specific API endpoint — parameters, request body, responses.",
+				description:
+					"Get detailed schema for a specific API endpoint — parameters, request body, responses.",
 				inputSchema: {
 					type: "object" as const,
 					properties: {
@@ -188,7 +187,8 @@ async function main(): Promise<void> {
 						},
 						path_params: {
 							type: "object",
-							description: "Path parameters as key-value pairs (e.g. {owner: 'overpod', repo: 'mcp-telegram'})",
+							description:
+								"Path parameters as key-value pairs (e.g. {owner: 'overpod', repo: 'mcp-telegram'})",
 							additionalProperties: { type: "string" },
 						},
 						query_params: {
@@ -231,14 +231,18 @@ async function main(): Promise<void> {
 					break;
 
 				case "invoke":
-					result = await invoke(spec, config, args as {
-						method: string;
-						path: string;
-						path_params?: Record<string, string>;
-						query_params?: Record<string, string>;
-						headers?: Record<string, string>;
-						body?: unknown;
-					});
+					result = await invoke(
+						spec,
+						config,
+						args as {
+							method: string;
+							path: string;
+							path_params?: Record<string, string>;
+							query_params?: Record<string, string>;
+							headers?: Record<string, string>;
+							body?: unknown;
+						},
+					);
 					break;
 
 				default:
@@ -248,7 +252,9 @@ async function main(): Promise<void> {
 			return { content: [{ type: "text", text: result }] };
 		} catch (err) {
 			return {
-				content: [{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+				content: [
+					{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` },
+				],
 				isError: true,
 			};
 		}
@@ -261,7 +267,10 @@ async function main(): Promise<void> {
 }
 
 function globToRegex(pattern: string): RegExp {
-	const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+	const escaped = pattern
+		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
+		.replace(/\*/g, ".*")
+		.replace(/\?/g, ".");
 	return new RegExp(escaped);
 }
 

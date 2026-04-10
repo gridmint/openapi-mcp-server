@@ -1,4 +1,11 @@
-import type { Endpoint, Parameter, ParsedSpec, RequestBody, ResponseDef, SchemaObject } from "./types.js";
+import type {
+	Endpoint,
+	Parameter,
+	ParsedSpec,
+	RequestBody,
+	ResponseDef,
+	SchemaObject,
+} from "./types.js";
 
 /**
  * Load and parse OpenAPI 3.x or Swagger 2.0 spec from URL or file path.
@@ -116,7 +123,11 @@ function decodeJsonPointer(s: string): string {
 	return s.replace(/~1/g, "/").replace(/~0/g, "~");
 }
 
-function extractBaseUrl(doc: Record<string, unknown>, specUrl: string, isSwagger2: boolean): string {
+function extractBaseUrl(
+	doc: Record<string, unknown>,
+	specUrl: string,
+	isSwagger2: boolean,
+): string {
 	if (isSwagger2) {
 		const host = (doc.host as string) ?? new URL(specUrl).host;
 		const basePath = (doc.basePath as string) ?? "/";
@@ -144,7 +155,10 @@ function parseSwagger2Operation(
 	op: Record<string, unknown>,
 	pathParams?: unknown[],
 ): Endpoint {
-	const allParams = [...((pathParams as Record<string, unknown>[]) ?? []), ...((op.parameters as Record<string, unknown>[]) ?? [])];
+	const allParams = [
+		...((pathParams as Record<string, unknown>[]) ?? []),
+		...((op.parameters as Record<string, unknown>[]) ?? []),
+	];
 
 	const parameters: Parameter[] = [];
 	let requestBody: RequestBody | undefined;
@@ -166,7 +180,10 @@ function parseSwagger2Operation(
 					schema: { type: "object", properties: {} },
 				};
 			}
-			const props = (requestBody.schema as Record<string, unknown>).properties as Record<string, unknown>;
+			const props = (requestBody.schema as Record<string, unknown>).properties as Record<
+				string,
+				unknown
+			>;
 			props[param.name as string] = {
 				type: param.type,
 				description: param.description,
@@ -186,7 +203,9 @@ function parseSwagger2Operation(
 
 	const responses: Record<string, ResponseDef> = {};
 	if (op.responses && typeof op.responses === "object") {
-		for (const [code, resp] of Object.entries(op.responses as Record<string, Record<string, unknown>>)) {
+		for (const [code, resp] of Object.entries(
+			op.responses as Record<string, Record<string, unknown>>,
+		)) {
 			responses[code] = {
 				description: resp?.description as string | undefined,
 				schema: resp?.schema as SchemaObject | undefined,
@@ -216,7 +235,10 @@ function parseOpenApi3Operation(
 	op: Record<string, unknown>,
 	pathParams?: unknown[],
 ): Endpoint {
-	const rawParams = [...((pathParams as Record<string, unknown>[]) ?? []), ...((op.parameters as Record<string, unknown>[]) ?? [])];
+	const rawParams = [
+		...((pathParams as Record<string, unknown>[]) ?? []),
+		...((op.parameters as Record<string, unknown>[]) ?? []),
+	];
 
 	const parameters: Parameter[] = rawParams.map((p) => {
 		const param = p as Record<string, unknown>;
@@ -237,7 +259,7 @@ function parseOpenApi3Operation(
 			// Prefer application/json, fallback to first
 			const contentType = content["application/json"]
 				? "application/json"
-				: Object.keys(content)[0] ?? "application/json";
+				: (Object.keys(content)[0] ?? "application/json");
 			const mediaType = content[contentType];
 			requestBody = {
 				required: rb.required as boolean,
@@ -250,7 +272,9 @@ function parseOpenApi3Operation(
 
 	const responses: Record<string, ResponseDef> = {};
 	if (op.responses && typeof op.responses === "object") {
-		for (const [code, resp] of Object.entries(op.responses as Record<string, Record<string, unknown>>)) {
+		for (const [code, resp] of Object.entries(
+			op.responses as Record<string, Record<string, unknown>>,
+		)) {
 			const content = resp?.content as Record<string, Record<string, unknown>> | undefined;
 			let schema: SchemaObject | undefined;
 			if (content) {

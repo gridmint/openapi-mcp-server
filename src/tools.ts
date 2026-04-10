@@ -1,5 +1,5 @@
-import type { Endpoint, ParsedSpec, ServerConfig } from "./types.js";
 import { invokeEndpoint } from "./http.js";
+import type { Endpoint, ParsedSpec, ServerConfig } from "./types.js";
 
 /**
  * list_endpoints — browse available API endpoints with optional filtering.
@@ -65,7 +65,9 @@ export function listEndpoints(
 	}
 
 	lines.push("");
-	lines.push('Use get_schema(method, path) for endpoint details, then invoke(method, path, ...) to call it.');
+	lines.push(
+		"Use get_schema(method, path) for endpoint details, then invoke(method, path, ...) to call it.",
+	);
 
 	return lines.join("\n");
 }
@@ -124,7 +126,9 @@ function formatEndpointSchema(ep: Endpoint): string {
 
 	// Request body
 	if (ep.requestBody) {
-		lines.push(`\nRequest Body (${ep.requestBody.contentType})${ep.requestBody.required ? " — required" : ""}:`);
+		lines.push(
+			`\nRequest Body (${ep.requestBody.contentType})${ep.requestBody.required ? " — required" : ""}:`,
+		);
 		if (ep.requestBody.description) lines.push(`  ${ep.requestBody.description}`);
 		if (ep.requestBody.schema) {
 			lines.push(formatSchema(ep.requestBody.schema, 2));
@@ -144,7 +148,9 @@ function formatEndpointSchema(ep: Endpoint): string {
 		}
 	}
 
-	lines.push(`\nUsage: invoke(method="${ep.method}", path="${ep.path}"${ep.parameters.length > 0 ? ", ..." : ""})`);
+	lines.push(
+		`\nUsage: invoke(method="${ep.method}", path="${ep.path}"${ep.parameters.length > 0 ? ", ..." : ""})`,
+	);
 
 	return lines.join("\n");
 }
@@ -215,7 +221,10 @@ export async function invoke(
 // === Helpers ===
 
 function globToRegex(pattern: string): RegExp {
-	const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+	const escaped = pattern
+		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
+		.replace(/\*/g, ".*")
+		.replace(/\?/g, ".");
 	return new RegExp(escaped);
 }
 
