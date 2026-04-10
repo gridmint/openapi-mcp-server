@@ -1,3 +1,4 @@
+import { parse as parseYaml } from "yaml";
 import type {
 	Endpoint,
 	Parameter,
@@ -58,19 +59,35 @@ export async function parseSpec(specUrl: string, baseUrlOverride?: string): Prom
 }
 
 async function loadSpec(specUrl: string): Promise<Record<string, unknown>> {
+	let text: string;
+
 	if (specUrl.startsWith("http://") || specUrl.startsWith("https://")) {
 		const resp = await fetch(specUrl);
 		if (!resp.ok) throw new Error(`Failed to fetch spec: ${resp.status} ${resp.statusText}`);
-		return (await resp.json()) as Record<string, unknown>;
+		text = await resp.text();
+	} else {
+		text = await Bun.file(specUrl).text();
 	}
-	// Local file
-	const file = Bun.file(specUrl);
-	const text = await file.text();
-	// Support YAML (basic detection)
-	if (specUrl.endsWith(".yaml") || specUrl.endsWith(".yml")) {
-		throw new Error("YAML specs not yet supported — convert to JSON or use a JSON URL");
+
+	return parseText(text);
+}
+
+function parseText(text: string): Record<string, unknown> {
+	const trimmed = text.trimStart();
+	// If it looks like JSON, try JSON first
+	if (trimmed.startsWith("{")) {
+		try {
+			return JSON.parse(text) as Record<string, unknown>;
+		} catch {
+			// Fall through to YAML
+		}
 	}
-	return JSON.parse(text);
+	// YAML handles both YAML and JSON
+	const result = parseYaml(text);
+	if (result === null || typeof result !== "object" || Array.isArray(result)) {
+		throw new Error("Spec must be a JSON or YAML object");
+	}
+	return result as Record<string, unknown>;
 }
 
 /**
