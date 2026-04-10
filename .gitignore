@@ -3,3 +3,5 @@ dist/
 openapi-mcp
 *.tsbuildinfo
 bun.lock
+.serena/
+.claude/
