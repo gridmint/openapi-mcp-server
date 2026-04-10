@@ -13,14 +13,15 @@ import type {
  */
 export async function parseSpec(specUrl: string, baseUrlOverride?: string): Promise<ParsedSpec> {
 	const raw = await loadSpec(specUrl);
-	const doc = resolveRefs(raw, raw, new Set());
+	const doc = resolveRefs(raw, raw, new Set()) as Record<string, unknown>;
 
-	const isSwagger2 = doc.swagger?.startsWith("2.");
+	const isSwagger2 = typeof doc.swagger === "string" && doc.swagger.startsWith("2.");
 
 	const baseUrl = baseUrlOverride ?? extractBaseUrl(doc, specUrl, isSwagger2);
-	const title = doc.info?.title ?? "API";
-	const version = doc.info?.version ?? "0.0.0";
-	const description = doc.info?.description;
+	const info = doc.info as Record<string, unknown> | undefined;
+	const title = (info?.title as string) ?? "API";
+	const version = (info?.version as string) ?? "0.0.0";
+	const description = info?.description as string | undefined;
 
 	const endpoints: Endpoint[] = [];
 	const tagSet = new Set<string>();
@@ -76,7 +77,7 @@ async function loadSpec(specUrl: string): Promise<Record<string, unknown>> {
  * Recursively resolve $ref pointers in-place.
  * Uses a visited set to break infinite cycles.
  */
-function resolveRefs(node: unknown, root: Record<string, unknown>, visited: Set<string>): any {
+function resolveRefs(node: unknown, root: Record<string, unknown>, visited: Set<string>): unknown {
 	if (node === null || node === undefined || typeof node !== "object") return node;
 
 	if (Array.isArray(node)) {
