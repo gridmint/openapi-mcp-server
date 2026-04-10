@@ -61,4 +61,6 @@ export interface ServerConfig {
 	include?: string[];
 	exclude?: string[];
 	pageSize: number;
+	transport: "stdio" | "http";
+	port: number;
 }

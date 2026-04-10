@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { parseAuthString } from "./http.js";
@@ -10,7 +10,7 @@ import type { ServerConfig } from "./types.js";
 // === CLI argument parsing ===
 function parseArgs(): ServerConfig {
 	const args = process.argv.slice(2);
-	const config: Partial<ServerConfig> = { pageSize: 20 };
+	const config: Partial<ServerConfig> = { pageSize: 20, transport: "stdio", port: 3000 };
 
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
@@ -41,6 +41,14 @@ function parseArgs(): ServerConfig {
 				break;
 			case "--page-size":
 				config.pageSize = Number.parseInt(next, 10);
+				i++;
+				break;
+			case "--transport":
+				config.transport = next as "stdio" | "http";
+				i++;
+				break;
+			case "--port":
+				config.port = Number.parseInt(next, 10);
 				i++;
 				break;
 			case "--help":
@@ -83,6 +91,8 @@ Options:
   --include <pattern>    Include only matching endpoints (glob, repeatable)
   --exclude <pattern>    Exclude matching endpoints (glob, repeatable)
   --page-size <n>        Endpoints per page in list_endpoints (default: 20)
+  --transport <type>     Transport: stdio (default) or http
+  --port <n>             HTTP port (default: 3000, only with --transport http)
   -h, --help             Show this help
 
 Environment variables:
@@ -93,7 +103,7 @@ Environment variables:
 Examples:
   openapi-mcp --spec https://petstore3.swagger.io/api/v3/openapi.json
   openapi-mcp --spec ./swagger.json --base-url http://localhost:3000/api --auth bearer:mytoken
-  openapi-mcp --spec https://gitea.example.com/swagger.v1.json --auth bearer:TOKEN --include "repos/*"
+  openapi-mcp --spec https://api.example.com/openapi.json --transport http --port 8080
 `);
 }
 
@@ -118,13 +128,13 @@ async function main(): Promise<void> {
 	console.error(`Loaded ${spec.title} v${spec.version}: ${spec.endpoints.length} endpoints`);
 
 	// Create MCP server
-	const server = new Server(
+	const mcpServer = new McpServer(
 		{ name: `openapi-mcp: ${spec.title}`, version: "0.2.0" },
 		{ capabilities: { tools: {} } },
 	);
 
-	// Register tools
-	server.setRequestHandler(ListToolsRequestSchema, async () => ({
+	// Use low-level server for dynamic tool schemas (no Zod dependency)
+	mcpServer.server.setRequestHandler(ListToolsRequestSchema, async () => ({
 		tools: [
 			{
 				name: "list_endpoints",
@@ -211,7 +221,7 @@ async function main(): Promise<void> {
 		],
 	}));
 
-	server.setRequestHandler(CallToolRequestSchema, async (request) => {
+	mcpServer.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 		const { name, arguments: args } = request.params;
 
 		try {
@@ -260,10 +270,39 @@ async function main(): Promise<void> {
 		}
 	});
 
-	// Start server
-	const transport = new StdioServerTransport();
-	await server.connect(transport);
-	console.error("MCP server started on stdio");
+	// Start server with selected transport
+	if (config.transport === "http") {
+		await startHttpTransport(mcpServer, config.port);
+	} else {
+		const transport = new StdioServerTransport();
+		await mcpServer.connect(transport);
+		console.error("MCP server started on stdio");
+	}
+}
+
+async function startHttpTransport(mcpServer: McpServer, port: number): Promise<void> {
+	const { WebStandardStreamableHTTPServerTransport } = await import(
+		"@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
+	);
+
+	const transport = new WebStandardStreamableHTTPServerTransport({
+		sessionIdGenerator: () => crypto.randomUUID(),
+	});
+
+	await mcpServer.connect(transport);
+
+	Bun.serve({
+		port,
+		fetch: async (req) => {
+			const url = new URL(req.url);
+			if (url.pathname === "/mcp") {
+				return transport.handleRequest(req);
+			}
+			return new Response("Not Found", { status: 404 });
+		},
+	});
+
+	console.error(`MCP server started on http://localhost:${port}/mcp`);
 }
 
 main().catch((err) => {
