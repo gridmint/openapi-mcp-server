@@ -109,12 +109,14 @@ bun install && bun run compile
 openapi-mcp --spec <url-or-path> [options]
 
 Options:
-  --spec <url|path>      OpenAPI 3.x or Swagger 2.0 spec (required)
+  --spec <url|path>      OpenAPI 3.x or Swagger 2.0 spec, JSON or YAML (required)
   --base-url <url>       Override API base URL from spec
   --auth <credentials>   Authentication (see below)
   --include <pattern>    Include only matching paths (glob, repeatable)
   --exclude <pattern>    Exclude matching paths (glob, repeatable)
   --page-size <n>        Endpoints per page (default: 20)
+  --transport <type>     Transport: stdio (default) or http
+  --port <n>             HTTP port (default: 3000, only with --transport http)
 ```
 
 ### Authentication formats
@@ -134,17 +136,27 @@ OPENAPI_BASE_URL=https://api.example.com/v1
 OPENAPI_AUTH=bearer:your-token
 ```
 
+### HTTP transport
+
+For web-based MCP clients, use the HTTP transport:
+
+```bash
+openapi-mcp --spec https://petstore3.swagger.io/api/v3/openapi.json --transport http --port 8080
+# MCP server started on http://localhost:8080/mcp
+```
+
 ## Features
 
 - ✅ **3 meta-tools** — `list_endpoints`, `get_schema`, `invoke`
 - ✅ **Swagger 2.0 + OpenAPI 3.x** — auto-detected
+- ✅ **JSON + YAML specs** — detected by content, not file extension
 - ✅ **Recursive `$ref` resolution** — with cycle detection (no crashes)
 - ✅ **Real HTTP calls** — not just spec reading
-- ✅ **Bearer / Basic / API Key** auth
+- ✅ **Bearer / Basic / API Key** auth (header and query)
 - ✅ **Endpoint filtering** — `--include` / `--exclude` with glob patterns
 - ✅ **Pagination** — large APIs stay manageable
 - ✅ **Single binary** — `bun build --compile` (zero runtime deps)
-- ✅ **stdio transport** — standard MCP protocol
+- ✅ **stdio + HTTP transports** — standard MCP protocol
 
 ## How It Works
 
