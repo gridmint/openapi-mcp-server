@@ -1,6 +1,6 @@
 {
   "name": "@gridmint/openapi-mcp-server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Universal OpenAPI/Swagger MCP server — 3 meta-tools instead of 300+. Supports Swagger 2.0 & OpenAPI 3.x, recursive $ref resolution, real API calls.",
   "type": "module",
   "scripts": {

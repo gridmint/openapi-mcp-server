@@ -129,7 +129,7 @@ async function main(): Promise<void> {
 
 	// Create MCP server
 	const mcpServer = new McpServer(
-		{ name: `openapi-mcp: ${spec.title}`, version: "0.2.0" },
+		{ name: `openapi-mcp: ${spec.title}`, version: "0.3.0" },
 		{ capabilities: { tools: {} } },
 	);
 
