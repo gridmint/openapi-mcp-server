@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "xquik": {
+      "command": "/path/to/openapi-mcp",
+      "args": [
+        "--spec",
+        "https://xquik.com/openapi.json"
+      ],
+      "env": {
+        "OPENAPI_AUTH": "apikey:header:x-api-key:YOUR_XQUIK_API_KEY"
+      }
+    }
+  }
+}

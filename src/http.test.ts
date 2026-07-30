@@ -1,5 +1,36 @@
 import { describe, expect, test } from "bun:test";
-import { parseAuthString } from "./http.js";
+import { invokeEndpoint, parseAuthString } from "./http.js";
+
+async function responseBody(body: string): Promise<unknown> {
+	const server = Bun.serve({
+		port: 0,
+		fetch: () =>
+			new Response(body, {
+				headers: { "content-type": "application/json" },
+			}),
+	});
+
+	try {
+		const result = await invokeEndpoint({
+			baseUrl: `http://127.0.0.1:${server.port}`,
+			method: "GET",
+			path: "/response",
+		});
+		return result.body;
+	} finally {
+		await server.stop(true);
+	}
+}
+
+describe("invokeEndpoint", () => {
+	test("parses a valid JSON response", async () => {
+		expect(await responseBody('{"ok":true}')).toEqual({ ok: true });
+	});
+
+	test("preserves an invalid JSON response as text", async () => {
+		expect(await responseBody("{invalid-json")).toBe("{invalid-json");
+	});
+});
 
 describe("parseAuthString", () => {
 	test("parses bearer token", () => {

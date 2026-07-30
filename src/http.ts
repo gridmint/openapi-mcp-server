@@ -82,21 +82,24 @@ export async function invokeEndpoint(opts: {
 
 	let body: unknown;
 	const ct = resp.headers.get("content-type") ?? "";
+	const text = await resp.text();
 	if (ct.includes("application/json")) {
 		try {
-			body = await resp.json();
+			body = JSON.parse(text) as unknown;
 		} catch {
-			body = await resp.text();
+			body = truncateTextResponse(text);
 		}
 	} else {
-		const text = await resp.text();
-		body =
-			text.length > MAX_TEXT_RESPONSE_LENGTH
-				? `${text.slice(0, MAX_TEXT_RESPONSE_LENGTH)}\n\n... [truncated, ${text.length} chars total]`
-				: text;
+		body = truncateTextResponse(text);
 	}
 
 	return { status: resp.status, statusText: resp.statusText, headers: respHeaders, body };
+}
+
+function truncateTextResponse(text: string): string {
+	return text.length > MAX_TEXT_RESPONSE_LENGTH
+		? `${text.slice(0, MAX_TEXT_RESPONSE_LENGTH)}\n\n... [truncated, ${text.length} chars total]`
+		: text;
 }
 
 function applyAuth(headers: Record<string, string>, auth: AuthConfig): void {
